@@ -41,7 +41,7 @@ app.post('/api/users', function(req, res) {
       console.log(err);
     });
 
-    res.json({"username": data.username, "_id": data._id });
+    res.json(newUser);
   })
   .catch((err)=>{
       console.log(err);
@@ -60,25 +60,28 @@ app.get('/api/users', function(req, res){
 
 //example of handler using await/async
 app.post("/api/users/:_id/exercises", async function(req, res){
+  const {_id} = req.params;
+  const {description, duration} = req.body;
+  // deal with date
+  var dateStr = req.body.date;
+  var date = new Date(dateStr);
+  if (!dateStr){
+    date = new Date(Date.now())
+  }
+  if(isNaN(date) || isNaN(date.getTime())){
+    console.log(dateStr);
+    res.json({ error : "Invalid Date" })
+  }
   try{
-    // deal with date
-    var dateStr = req.body.date;
-    var date = new Date(dateStr);
-    if (!dateStr){
-      date = new Date(Date.now())
-    }
-    if(isNaN(date) || isNaN(date.getTime())){
-      console.log(dateStr);
-      res.json({ error : "Invalid Date" })
-    }
-
-    // retrieve username from _id
-    const {_id} = req.params;
     const user = await models.users.findById(_id);
-    const username = user.username;
-    const {description, duration} = req.body;
-    
-    const newExercise = await models.insertExercise(_id, username, description, duration, date);
+    if(!user){
+      res.send("Couldn't find user!")
+    }else{
+      const username = user.username;
+      const newExercise = await models.insertExercise(_id, username, description, duration, date);
+    }
+    // retrieve username from _id
+    // const newExercise = await models.insertExercise(_id, username, description, duration, date);
     models.updateLogbook(_id, description, duration, date);
     
     res.json({"_id": _id, "username": username, "date": date.toDateString(), "duration":duration, "description":description});
