@@ -22,10 +22,7 @@ app.get('/', (req, res) => {
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json())
 
-// app.post('/api/users', function(req, res) {
-//   console.log(`input username: ${req.body.username}`);
-//   models.insertusername(req.body.username);
-// });
+
 app.post('/api/users', function(req, res) {
   const newUser = new models.users({
     username: req.body.username
@@ -40,8 +37,10 @@ app.post('/api/users', function(req, res) {
     newLogbook.save().catch((err)=>{
       console.log(err);
     });
-
+    // console.log("POST: /api/users")
+    // console.log({"username": data.username, "_id": data._id })
     res.json({"username": data.username, "_id": data._id });
+
   })
   .catch((err)=>{
       console.log(err);
@@ -52,6 +51,8 @@ app.post('/api/users', function(req, res) {
 // example of handler using promise chain
 app.get('/api/users', function(req, res){
   models.users.find().then((data)=>{
+    // console.log("GET: /api/users");
+    // console.log(data);
     res.send(data);
   }).catch((err)=>{
     console.log(err);
@@ -68,7 +69,7 @@ app.post("/api/users/:_id/exercises", async function(req, res){
       date = new Date(Date.now())
     }
     if(isNaN(date) || isNaN(date.getTime())){
-      console.log(dateStr);
+      console.log(`DATE ERROR: ${dateStr}`);
       res.json({ error : "Invalid Date" })
     }
 
@@ -78,10 +79,11 @@ app.post("/api/users/:_id/exercises", async function(req, res){
     const username = user.username;
     const {description, duration} = req.body;
     
-    const newExercise = await models.insertExercise(_id, username, description, duration, date);
+    await models.insertExercise(_id, username, description, duration, date);
     models.updateLogbook(_id, description, duration, date);
-    
-    res.json({"_id": _id, "username": username, "date": date.toDateString(), "duration":duration, "description":description});
+    // console.log("POST: /api/users/:_id/exercises");
+    // console.log({"_id": _id, "username": username, "date": date.toDateString(), "duration":duration, "description":description});
+    res.json({"_id": _id, "username": username, "date": date.toDateString(), "duration": Number(duration), "description":description});
   
   }catch (err){
     console.log(err);
@@ -101,8 +103,8 @@ app.get("/api/users/:_id/logs", async function(req, res){
   var {_id} = req.params;
   _id = new mongoose.Types.ObjectId(_id);
   var now = new Date(Date.now())
-  console.log(`date now: ${now.toDateString()}`)
-  console.log(`from: ${from} type:${typeof from}\nto: ${to} type:${typeof to}\nlimit: ${limit} type:${typeof limit}\nid: ${_id}`);
+  // console.log(`date now: ${now.toDateString()}`)
+  // console.log(`from: ${from} type:${typeof from}\nto: ${to} type:${typeof to}\nlimit: ${limit} type:${typeof limit}\nid: ${_id}`);
 
   models.logbook.aggregate([
     {
@@ -136,24 +138,27 @@ app.get("/api/users/:_id/logs", async function(req, res){
     }])
     .exec()
     .then((data) => {
-        res.json(data);
+        console.log("GET: /api/users/:_id/logs")
+        console.log(data[0])
+        console.log("type of data")
+        console.log(typeof data[0])
+        // res.json(data[0]) if only dates were strings
+
+        res.json({
+          username: data[0].username,
+          count: data[0].count,
+          _id: data[0]._id,
+          log: data[0].log.map((a)=>({
+            description: a.description,
+            duration: a.duration,
+            date: a.date.toDateString()}))
+        });
+
     })
     .catch((err)=>{
       console.log(err);
       res.send(err);
     }); 
-   
-// }
-
-  // models.logbook.findById(_id)
-  // .select({__v : 0})
-  // .then((data)=>{;
-  //   console.log(data);
-  //   res.send(data);
-  // })
-  // .catch((err)=>{
-  //   console.log(err);
-  // })
 });
 
 
